@@ -7,11 +7,11 @@ pygame.init()
 
 #------ Enemies ------
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, waypoints):
+    def __init__(self,waypoints):
         pygame.sprite.Sprite.__init__(self)
         self.now = 0
         self.lastTimer = 0
-        self.time = 80 
+        self.time = 80 #frame velocity
         self.waypoints = waypoints
         self.target_waypoints = 1
         
@@ -20,7 +20,9 @@ class Enemy(pygame.sprite.Sprite):
         self.move()
     def move(self):
         '''
-        Here we create an IA path follow that calculates the Character movement from initial position (first Waypoint) to the next target waypoint, then it moves the character to there
+        Here we create an IA path follow 
+        that calculates the Character movement from initial position (first Waypoint) to the next target waypoint
+        then it moves the character to there
         '''
         if self.target_waypoints < len(self.waypoints):# If the rat hasn't reached the last waypoint yet, keep moving
             self.target = Vector2(self.waypoints[self.target_waypoints])
@@ -29,10 +31,10 @@ class Enemy(pygame.sprite.Sprite):
             self.y = self.movement.y
             
             if self.now - self.lastTimer > self.time: #We Used This a lot in TAC 
-                self.lastTimer = self.now
                 self.frame += 1
                 if self.frame > 5:
                     self.frame = 0
+                self.lastTimer = self.now
                     
             if abs(self.x) > abs(self.y): #if the movement on x is higher than horizontal movement
                 if self.x > 0: #if x positive it means that the character is moving right
@@ -64,16 +66,16 @@ class Enemy(pygame.sprite.Sprite):
 #------ Rat ------
 class Rat(Enemy): 
     #Here i used Heritance that we students learned on Programação Lessons, but in Java. Here the dad function (Enemy Class), uses son Class (Rato, Cavaleiro and Mago)'s variables and methods
-    def __init__(self, waypoints):
+    def __init__(self, images, imagesDie, waypoints):
         super().__init__(waypoints)
-        self.imageD = pygame.image.load("game code/assets/images/enemie1/D_Run.png")
-        self.imageS = pygame.image.load("game code/assets/images/enemie1/S_Run.png")
-        self.imageU = pygame.image.load("game code/assets/images/enemie1/U_Run.png")
+        self.imageD = images[0]
+        self.imageS = images[1]
+        self.imageU = images[2]
         self.imageA = pygame.transform.flip(self.imageU, True, False)
         self.rect = self.imageD.get_rect()        
         
         self.anime = {} #creates a dictionary
-        self.life = 50
+        self.life = 15
         self.speed = 1
         self.dir = "up" # character directions starts up
         self.frame = 0
@@ -86,7 +88,6 @@ class Rat(Enemy):
         self.image = self.anime[self.dir][self.frame]
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
-        #self.image.center = self.pos
         
     def slicing(self, image, direction):
         anime = []
@@ -97,17 +98,17 @@ class Rat(Enemy):
 
 #------ Knight ------ 
 class Knight(Enemy): #Heritance
-    def __init__(self, waypoints):
+    def __init__(self, images, imagesDeath, waypoints):
         super().__init__(waypoints)
-        self.imageD = pygame.image.load("game code/assets/images/enemie2/D_Run.png")
-        self.imageS = pygame.image.load("game code/assets/images/enemie2/S_Run.png")
-        self.imageU = pygame.image.load("game code/assets/images/enemie2/U_Run.png")
+        self.imageD = images[0]
+        self.imageS = images[1]
+        self.imageU = images[2]
         self.imageA = pygame.transform.flip(self.imageU, True, False)
         self.rect = self.imageD.get_rect()        
         
         self.anime = {}
-        self.life = 50
-        self.speed = 1.2
+        self.life = 30
+        self.speed = 1.15
         self.dir = "up" 
         self.frame = 0
         
@@ -123,7 +124,6 @@ class Knight(Enemy): #Heritance
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
         #self.image.center = self.pos
-        
     def slicing(self, image, direction):
         anime = []
         for i in range(0, 6):
@@ -132,16 +132,23 @@ class Knight(Enemy): #Heritance
         return anime
     
 class Wizard(Enemy): #Heritance
-    def __init__(self, waypoints):
+    def __init__(self, images, imagesDeath, waypoints):
         super().__init__(waypoints)
-        self.imageD = pygame.image.load("game code/assets/images/enemie3/D_Fly.png")
-        self.imageS = pygame.image.load("game code/assets/images/enemie3/S_Fly.png")
-        self.imageU = pygame.image.load("game code/assets/images/enemie3/U_Fly.png")
+        self.imageD = images[0]
+        self.imageS = images[1]
+        self.imageU = images[2]
         self.imageA = pygame.transform.flip(self.imageU, True, False)
-        self.rect = self.imageD.get_rect()        
+        self.rect = self.imageD.get_rect() 
+        
+        self.imageDDeath = imagesDeath[0]
+        self.imagesSDeath = imagesDeath[1]
+        self.imagesUDeath = imagesDeath[2]
+        self.imageADeath = pygame.transform.flip(self.imageUDie, True, False)
+               
         
         self.anime = {}
         self.life = 50
+        self.money = 12
         self.speed = 1.3
         self.dir = "right" 
         self.frame = 0
@@ -153,7 +160,6 @@ class Wizard(Enemy): #Heritance
         
         self.image = self.anime[self.dir][self.frame]
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
-        print(self.pos)
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
         
     def slicing(self, image, direction):
@@ -163,5 +169,15 @@ class Wizard(Enemy): #Heritance
             anime.append(image.subsurface((x, 0, sprite_size, sprite_size))) #This cuts the rat sprite in 96x96 pixels
         return anime
     
-
-    
+    def takeDamage(self, damage):
+        self.life -= damage
+        if self.life < 0: # life cannot be negative, so the value if negative is alaways 0 
+            self.life = 0 
+            die()
+            
+    def die(self):
+        anime = []
+        for i in range(0, 6):
+            x = i * 96
+            anime.append(self.imagesDie.subsurface((x, 0, sprite_size, sprite_size))) #This cuts the rat sprite in 96x96 pixels
+        return anime

@@ -9,6 +9,7 @@ class Towers(pygame.sprite.Sprite):
         
 class TowerLevel1(Tower):
     def __init__(self, image, pos):
+        s
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("game code/assets/images/Torres/Torre001.png"), 
         self.rect = self.image.get_rect()

@@ -1,10 +1,11 @@
 import pygame
 import sys
 import csv
+import threading
 import numpy as np
 import time
-from Enemy import *
 #from Towers import *
+from Enemy import *
 import random as rm
 
 #------ Settings ------
@@ -15,15 +16,20 @@ tile_size = 32
 path_csv = "game code/files/MapaTeste_Chao.csv"
 path_menu = "game code/assets/images/MenuImagem.png"
 gameName = "Medieval Tower Defense"
+loadingBarBackGroundPath = "game code/assets/images/loading/Frames/LoadingBar02Frame_192x18.png"
+loadingBarPath = "game code/assets/images/loading/Fill/LoadingBar02Fill_192x18.png"
 
-state = "Menu"
+state = "Loading"
 running = True
 FPS = 60
 showPos = False
 timer = time.time()
-
+work = 100
+loadingFinished = False
+loadingProgress = 0
+loadingBarWidth = 8
+    
 waveLvl1 = ["rat", "rat", "knight", "wizard"]
-
 
 #------ Pygame Init ------
 pygame.init()
@@ -43,11 +49,10 @@ title = font.render(gameName, True, (0,0,0))
 surface = pygame.Surface((screen_w, screen_h))
 surface.fill((100, 100, 100))
 
-#------ Images Load ------
-sheet = pygame.image.load("game code/assets/images/FieldsTileset.png").convert_alpha()
 
 #------ Towers ------
 towers_group = pygame.sprite.Group()
+
 #------ Enemies ------
 waypoints = { 
     #dictionay with waypoints that enemy will follow randomnly
@@ -61,29 +66,98 @@ def SpawnEnemy(EnemyTipe, cooldown):
     global timer #seconds
     if time.time() - timer > cooldown:
         if EnemyTipe == "rat":
-            enemy_group.add(Rat(rm.choice(list(waypoints.values()))))
+            enemy_group.add(Rat(rat, ratDie,rm.choice(list(waypoints.values()))))
             waveLvl1.pop(0)
             timer = time.time()
         elif EnemyTipe == "knight":
-            enemy_group.add(Knight(rm.choice(list(waypoints.values()))))
+            enemy_group.add(Knight(knight, knightDie, rm.choice(list(waypoints.values()))))
             waveLvl1.pop(0)
             timer = time.time()
         elif EnemyTipe == "wizard":
-            enemy_group.add(Wizard(rm.choice(list(waypoints.values()))))
+            enemy_group.add(Wizard(wizard, wizardDie, rm.choice(list(waypoints.values()))))
             waveLvl1.pop(0)
             timer = time.time()
          
+#------ Loading ------
+def Loading():
+    global state, loadingFinished, loadingProgress
+    
+    loadingSurface = pygame.Surface((screen_w, screen_h))
+    
+    
+    loadingSurface.fill("#90909077")
+    
+    screen.blit(loadingSurface, (0,0))
+    
+    loadingBackGround = pygame.image.load(loadingBarBackGroundPath)
+    loadingBackGroundRect = loadingBackGround.get_rect(center=(518, 410))
+    
+    loadingBar = pygame.image.load(loadingBarPath)
+    loadingBarWidth = loadingProgress /  work * loadingBackGroundRect.w
+    scaledBar = pygame.transform.scale(loadingBar, (int(loadingBarWidth), loadingBar.get_height()))
+    loadingBarRect = loadingBar.get_rect(midleft=(423, 410))
+    
+    screen.blit(loadingBackGround, loadingBackGroundRect)
+    screen.blit(scaledBar, loadingBarRect)
+    
+    pygame.display.flip()
+    
+    if loadingFinished:
+        global timer
+        finished = buttonsFont.render("Loading Finished! Enjoy", True, (245, 222, 179))
+        finishedRect = finished.get_rect(center=(518, 410))
+        screen.fill("#90909077")
+        screen.blit(finished, finishedRect)
+        pygame.display.flip()
+        time.sleep(1)
+    
+        timer = time.time()
+        state = "Menu"
         
         
+def progress():
+    global loadingProgress, loadingFinished, sheet, loadingBackGround, loadingBar, tiles, rat, knight, wizard, ratDie, knightDie, wizardDie
+
+    #------ Images Load ------
+    sheet = pygame.image.load("game code/assets/images/FieldsTileset.png").convert_alpha()
+    loadingProgress += 14
+    time.sleep(1)
+    rat = [pygame.image.load("game code/assets/images/enemie1/D_Run.png"), pygame.image.load("game code/assets/images/enemie1/S_Run.png"), pygame.image.load("game code/assets/images/enemie1/U_Run.png")]
+    loadingProgress += 14
+    time.sleep(1)
+    knight = [pygame.image.load("game code/assets/images/enemie2/D_Run.png"), pygame.image.load("game code/assets/images/enemie2/S_Run.png"), pygame.image.load("game code/assets/images/enemie2/U_Run.png")]
+    loadingProgress += 14
+    time.sleep(1)
+    wizard = [pygame.image.load("game code/assets/images/enemie3/D_Fly.png"), pygame.image.load("game code/assets/images/enemie3/S_Fly.png"),  pygame.image.load("game code/assets/images/enemie3/U_Fly.png")]
+    loadingProgress += 14
+    time.sleep(1)
+    ratDie = [pygame.image.load("game code/assets/images/enemie1/D_Death.png"), pygame.image.load("game code/assets/images/enemie1/S_Death.png"),  pygame.image.load("game code/assets/images/enemie1/U_Death.png")]
+    time.sleep(1)
+    wizardDie = [pygame.image.load("game code/assets/images/enemie3/D_Death.png"), pygame.image.load("game code/assets/images/enemie3/S_Death.png"),  pygame.image.load("game code/assets/images/enemie3/U_Death.png")]
+    loadingProgress += 14
+    time.sleep(1)
+    knightDie = [pygame.image.load("game code/assets/images/enemie2/D_Death.png"), pygame.image.load("game code/assets/images/enemie2/S_Death.png"), pygame.image.load("game code/assets/images/enemie2/U_Death.png")]
+    loadingProgress += 14
+    
+    tiles = slicing(sheet, tile_size) #list that receives the cutted tiles, and after to draw game map
+    loadingProgress += 14
+    time.sleep(1)
+    load_mapa(path_csv)
+    loadingProgress = 100
+    time.sleep(1)
+    
+    if loadingProgress == 100: 
+        loadingFinished = True
+            
+threading.Thread(target=progress).start()        
     
 #------ Menu ------
 def Menu():
+    #FALTA BOTAO DE SOM
     #Mudar estetica botoes ao passar rato
-    #Titulo do Jogo retangulo com transparente!!!!!!!!!!!!!!!!!!!!!!!!!!!
     global state
     global running
     
-
     superficieMenu = pygame.Surface((screen_w, screen_h))
     menuImage = pygame.image.load("game code/assets/images/MenuImagem.png").convert()
     menuImage = pygame.transform.scale(menuImage, (screen_w, screen_h))
@@ -114,29 +188,27 @@ def Menu():
        
     if Button1.collidepoint(mousePosition) and pygame.mouse.get_pressed()[0] == 1:
             state = "Level1"
-            print(f"Starting {state}")
-            return state
         
     elif Button2.collidepoint(mousePosition) and pygame.mouse.get_pressed()[0] == 1:
             running = False
             print("Leaving...")
-            return running
         
     elif Button3.collidepoint(mousePosition) and pygame.mouse.get_pressed()[0] == 1:
             print("Settings") 
             #Here is the Setting function part that I´ll create if i have time
         
     screen.blit(superficieMenu, (0,0))
-
+    
 #------ Game Map ------        
 def load_mapa(path):
+    global game_map_layer0 
     with open(path, newline='') as f: #Opens CSV File
         reader = csv.reader(f) #Reads CSV File
         data = list(reader) #creates a list called data that contains all rows from the CSV file
         numCols = len(data) # data length
         numRows = len(data[0]) # data line 0 length 
 
-    global game_map_layer0 # This variable will be used outside the function, then i used global
+    
     game_map_layer0 = np.zeros((numRows, numCols)) #Creation of a array 2D (Matrix)
     
     with open(path, 'r') as f: #Open CSV file only to read ('r')
@@ -158,29 +230,17 @@ def slicing(sheet, tile_size):
             
     return tiles
 
-load_mapa(path_csv)
-
-tiles = slicing(sheet, tile_size) #list that receives the cutted tiles, and after to draw game map
-#------ Loading ------
-def Loading():
-    loadingSurface = pygame.Surface((screen_w, screen_h))
-    loadingSurface.fill(0,0,0)
 #------ Level 1 ------
 def Level1():
-    global contador, timer, waveLvl1
-    while timer < 6:
-        Loading()
+    global waveLvl1
+        
     for y in range(0, game_map_layer0.shape[0]):
         for x in range(game_map_layer0.shape[1]):
             surface.blit(tiles[int(game_map_layer0[y, x])], (y * tile_size, x * tile_size)) #Draw superficie
 
-    
     if len(waveLvl1) > 0:
-        print(waveLvl1)
-        SpawnEnemy(waveLvl1[0], 10)
-        
+        SpawnEnemy(waveLvl1[0], 8)
     
-
     enemy_group.update()
     enemy_group.draw(surface)
      
@@ -203,11 +263,14 @@ while running:
         
  
     if state == "Menu":
+        
         Menu()
+    elif state == "Loading":
+        Loading()
     elif state == "Level1":
         Level1()
    
-
+    
     pygame.display.flip()
 pygame.quit()
 sys.exit()
