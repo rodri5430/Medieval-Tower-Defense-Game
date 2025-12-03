@@ -1,5 +1,6 @@
 import pygame
 from pygame.math import Vector2
+import time
 
 sprite_size = 96
 
@@ -11,12 +12,12 @@ class Enemy(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.now = 0
         self.lastTimer = 0
-        self.time = 80 #frame velocity
+        self.time = 0.08 #frame velocity
         self.waypoints = waypoints
         self.target_waypoints = 1
         
     def update(self):
-        self.now = pygame.time.get_ticks()
+        self.now = time.time()
         self.move()
     def move(self):
         '''
@@ -55,7 +56,6 @@ class Enemy(pygame.sprite.Sprite):
         
         if dist >= self.speed:
             self.pos += self.movement.normalize() * self.speed #Here, normalize() is a Vector2 method that performs trigonometric calculations. If we print only self.movement, it will return a 2D vector representing the distance between waypoint 1 and waypoint 2. Then we need to move the character using that vector, and that’s why we use Vector2.
-            self.movement.normalize()
         else:
             if dist != 0:
                 self.pos += self.movement.normalize() * dist
@@ -68,27 +68,23 @@ class Rat(Enemy):
     #Here i used Heritance that we students learned on Programação Lessons, but in Java. Here the dad function (Enemy Class), uses son Class (Rato, Cavaleiro and Mago)'s variables and methods
     def __init__(self, images, imagesDie, waypoints):
         super().__init__(waypoints)
-        self.imageD = images[0]
-        self.imageS = images[1]
-        self.imageU = images[2]
-        self.imageA = pygame.transform.flip(self.imageU, True, False)
-        self.rect = self.imageD.get_rect()        
-        
+
         self.anime = {} #creates a dictionary
         self.life = 15
         self.speed = 1
+        self.damage = 10
         self.dir = "up" # character directions starts up
         self.frame = 0
         
-        self.anime["up"] = self.slicing(self.imageU, "up")
-        self.anime["left"] = self.slicing(self.imageS, "left")
-        self.anime["down"]  = self.slicing(self.imageD, "down")
+        self.anime["up"] = self.slicing(images[2], "up")
+        self.anime["left"] = self.slicing(images[1], "left")
+        self.anime["down"]  = self.slicing(images[0], "down")
         self.anime["right"] = [pygame.transform.flip(i, True, False) for i in self.anime["left"]]
-        
+        self.rect = self.anime["down"][0].get_rect()   
         self.image = self.anime[self.dir][self.frame]
+        
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
-        
     def slicing(self, image, direction):
         anime = []
         for i in range(0, 6):
@@ -111,6 +107,7 @@ class Knight(Enemy): #Heritance
         self.speed = 1.15
         self.dir = "up" 
         self.frame = 0
+        self.damage = 15
         
         self.anime["up"] = self.slicing(self.imageU, "up")
         self.anime["left"] = self.slicing(self.imageS, "left")
@@ -123,7 +120,6 @@ class Knight(Enemy): #Heritance
         '''
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
-        #self.image.center = self.pos
     def slicing(self, image, direction):
         anime = []
         for i in range(0, 6):
@@ -134,30 +130,28 @@ class Knight(Enemy): #Heritance
 class Wizard(Enemy): #Heritance
     def __init__(self, images, imagesDeath, waypoints):
         super().__init__(waypoints)
-        self.imageD = images[0]
-        self.imageS = images[1]
-        self.imageU = images[2]
-        self.imageA = pygame.transform.flip(self.imageU, True, False)
-        self.rect = self.imageD.get_rect() 
-        
-        self.imageDDeath = imagesDeath[0]
-        self.imagesSDeath = imagesDeath[1]
-        self.imagesUDeath = imagesDeath[2]
-        self.imageADeath = pygame.transform.flip(self.imageUDie, True, False)
-               
-        
+
         self.anime = {}
+        self.animeDeath = {}
         self.life = 50
         self.money = 12
         self.speed = 1.3
         self.dir = "right" 
         self.frame = 0
+        self.damage = 20
         
-        self.anime["up"] = self.slicing(self.imageU, "up")
-        self.anime["left"] = self.slicing(self.imageS, "left")
-        self.anime["down"]  = self.slicing(self.imageD, "down")
-        self.anime["right"] = [pygame.transform.flip(i, True, False) for i in self.anime["left"]]
-        
+        self.anime["up"] = self.slicing(images[2], "up")
+        self.anime["left"] = self.slicing(images[1], "left")
+        self.anime["down"]  = self.slicing(images[0], "down")
+        self.anime["right"] = [pygame.transform.flip(i, True, False) for i in self.anime["left"]] #Goes through all the left frames and flips them horizontally to create the right-facing animation
+        self.rect = self.anime["down"][0].get_rect() 
+         
+        self.animeDeath["up"] = self.slicingDeath(imagesDeath[2], "up")
+        self.animeDeath["left"] = self.slicingDeath(imagesDeath[1], "left")
+        self.animeDeath["down"]  = self.slicingDeath( imagesDeath[0], "down")
+        self.animeDeath["right"] = [pygame.transform.flip(i, True, False) for i in self.animeDeath["left"]]
+        self.rect = self.animeDeath["down"][0].get_rect() 
+         
         self.image = self.anime[self.dir][self.frame]
         self.pos = Vector2(waypoints[0][0], waypoints[0][1])
         self.rect = self.image.get_rect(center = (self.pos.x, self.pos.y))
@@ -173,11 +167,12 @@ class Wizard(Enemy): #Heritance
         self.life -= damage
         if self.life < 0: # life cannot be negative, so the value if negative is alaways 0 
             self.life = 0 
-            die()
+            self.kill()
             
-    def die(self):
+    def slicingDeath(self, image, direction):
         anime = []
         for i in range(0, 6):
             x = i * 96
-            anime.append(self.imagesDie.subsurface((x, 0, sprite_size, sprite_size))) #This cuts the rat sprite in 96x96 pixels
-        return anime
+            anime.append(image.subsurface((x, 0, sprite_size, sprite_size))) #This cuts the rat sprite in 96x96 pixels
+        return anime       
+    
